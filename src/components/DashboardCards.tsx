@@ -20,14 +20,14 @@ export const StockSummaryCard = ({ totalItems, lowStock, expiringItems }: { tota
               <span className="text-sm text-muted-foreground">Low Stock</span>
               <span className="text-medical-red font-semibold">{lowStock}</span>
             </div>
-            <Progress value={(lowStock / totalItems) * 100} className="h-2 bg-gray-100" indicatorClassName="bg-medical-red" />
+            <Progress value={(lowStock / totalItems) * 100} className="h-2 bg-gray-100" />
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Expiring Soon</span>
               <span className="text-medical-amber font-semibold">{expiringItems}</span>
             </div>
-            <Progress value={(expiringItems / totalItems) * 100} className="h-2 bg-gray-100" indicatorClassName="bg-medical-amber" />
+            <Progress value={(expiringItems / totalItems) * 100} className="h-2 bg-gray-100" />
           </div>
         </div>
       </CardContent>
