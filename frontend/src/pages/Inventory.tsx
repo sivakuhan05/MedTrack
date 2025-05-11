@@ -60,7 +60,11 @@ const Inventory = () => {
       if (!response.ok) {
         const errorData = await response.json();
         console.error("Error response:", errorData); // Debug log
-        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+        let detail = errorData.detail;
+        if (typeof detail !== 'string') {
+          detail = JSON.stringify(detail);
+        }
+        throw new Error(detail || `HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
@@ -112,7 +116,11 @@ const Inventory = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+        let detail = errorData.detail;
+        if (typeof detail !== 'string') {
+          detail = JSON.stringify(detail);
+        }
+        throw new Error(detail || `HTTP error! status: ${response.status}`);
       }
 
       await fetchDrugs(); // Refresh the list after update
@@ -144,7 +152,11 @@ const Inventory = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+        let detail = errorData.detail;
+        if (typeof detail !== 'string') {
+          detail = JSON.stringify(detail);
+        }
+        throw new Error(detail || `HTTP error! status: ${response.status}`);
       }
 
       // Update local state immediately
@@ -203,7 +215,11 @@ const Inventory = () => {
         if (responseData.detail && responseData.detail.includes("duplicate key error")) {
           throw new Error("An item with this name already exists. Please use a different name or update the existing item.");
         }
-        throw new Error(responseData.detail || `HTTP error! status: ${response.status}`);
+        let detail = responseData.detail;
+        if (typeof detail !== 'string') {
+          detail = JSON.stringify(detail);
+        }
+        throw new Error(detail || `HTTP error! status: ${response.status}`);
       }
 
       // If we get here, the item was created successfully

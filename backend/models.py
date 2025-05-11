@@ -82,6 +82,15 @@ class InventoryItem(MongoBaseModel):
         
         return cls(**data)
 
+class InventoryItemUpdate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    quantity: Optional[int] = None
+    unit: Optional[str] = None
+    use_period: Optional[int] = None
+    price: Optional[float] = None
+    reorder_level: Optional[int] = None
+
 class OrderItem(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     inventory_item_id: PyObjectId

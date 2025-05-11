@@ -1,11 +1,12 @@
 from fastapi import APIRouter, HTTPException, Body
 from typing import List
-from models import InventoryItem, InventoryItemCreate, InventoryActivity, PyObjectId
+from models import InventoryItem, InventoryItemCreate, InventoryActivity, PyObjectId, InventoryItemUpdate
 from database import get_inventory, get_inventory_activities
 from bson import ObjectId
 from datetime import datetime
 import logging
 from pydantic import BaseModel
+from collections import defaultdict
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -27,16 +28,6 @@ async def get_activities():
             "item_id": str(activity["item_id"])
         })
     return activities
-
-@router.get("/{item_id}", response_model=InventoryItem)
-async def get_item(item_id: str):
-    if not ObjectId.is_valid(item_id):
-        raise HTTPException(status_code=400, detail="Invalid item ID")
-    inventory = get_inventory()
-    item = await inventory.find_one({"_id": ObjectId(item_id)})
-    if not item:
-        raise HTTPException(status_code=404, detail="Item not found")
-    return InventoryItem(**item)
 
 @router.get("/", response_model=List[InventoryItem])
 async def get_inventory_items():
@@ -143,7 +134,7 @@ async def create_item(item: InventoryItemCreate):
         )
 
 @router.put("/{item_id}", response_model=InventoryItem)
-async def update_item(item_id: str, item: InventoryItem):
+async def update_item(item_id: str, item: InventoryItemUpdate):
     logger.info(f"Attempting to update item with ID: {item_id}")
     
     if not ObjectId.is_valid(item_id):
@@ -164,8 +155,11 @@ async def update_item(item_id: str, item: InventoryItem):
             logger.error(f"Item not found with ID: {item_id}")
             raise HTTPException(status_code=404, detail="Item not found")
         
-        item_dict = item.dict(by_alias=True)
+        item_dict = {k: v for k, v in item.dict(by_alias=True).items() if v is not None}
         item_dict["updated_at"] = datetime.utcnow()
+        # Always set name_lower from name
+        if "name" in item_dict:
+            item_dict["name_lower"] = item_dict["name"].lower()
         
         # Remove _id from the update data to prevent overwriting
         if "_id" in item_dict:
@@ -333,4 +327,68 @@ async def restock_item(item_id: str, update: QuantityUpdate):
     }
     await inventory_activities.insert_one(activity_dict)
     
-    return {"message": "Item restocked successfully"} 
+    return {"message": "Item restocked successfully"}
+
+@router.get("/sales-over-time")
+async def get_sales_over_time(by: str = "quantity"):
+    inventory_activities = get_inventory_activities()
+    inventory = get_inventory()
+    sales_by_date = defaultdict(float)
+    async for activity in inventory_activities.find({"action": "sold"}):
+        # Use only the date part (YYYY-MM-DD)
+        date_str = activity["timestamp"].strftime("%Y-%m-%d")
+        if by == "revenue":
+            details = activity.get("details", "")
+            try:
+                parts = details.split(" ")
+                quantity = int(parts[1])
+                name = " ".join(parts[4:])
+            except Exception:
+                continue
+            item = await inventory.find_one({"name": name})
+            price = item["price"] if item and "price" in item else 0
+            sales_by_date[date_str] += price * quantity
+        else:
+            sales_by_date[date_str] += 1
+    # Convert to sorted list of dicts
+    result = [
+        {"date": date, "sales": sales_by_date[date]}
+        for date in sorted(sales_by_date.keys())
+    ]
+    return result
+
+@router.get("/top-selling")
+async def get_top_selling_drugs(limit: int = 5):
+    inventory_activities = get_inventory_activities()
+    inventory = get_inventory()
+    sales_data = {}
+    # Aggregate sales by drug name
+    async for activity in inventory_activities.find({"action": "sold"}):
+        # Parse details: "Sold {quantity} {unit} of {name}"
+        details = activity.get("details", "")
+        try:
+            parts = details.split(" ")
+            quantity = int(parts[1])
+            name = " ".join(parts[4:])
+        except Exception:
+            continue
+        # Get price from inventory
+        item = await inventory.find_one({"name": name})
+        price = item["price"] if item and "price" in item else 0
+        if name not in sales_data:
+            sales_data[name] = {"name": name, "quantity": 0, "revenue": 0.0}
+        sales_data[name]["quantity"] += quantity
+        sales_data[name]["revenue"] += price * quantity
+    # Sort by revenue
+    sorted_sales = sorted(sales_data.values(), key=lambda x: x["revenue"], reverse=True)[:limit]
+    return sorted_sales
+
+@router.get("/{item_id}", response_model=InventoryItem)
+async def get_item(item_id: str):
+    if not ObjectId.is_valid(item_id):
+        raise HTTPException(status_code=400, detail="Invalid item ID")
+    inventory = get_inventory()
+    item = await inventory.find_one({"_id": ObjectId(item_id)})
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return InventoryItem(**item) 

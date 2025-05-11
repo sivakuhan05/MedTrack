@@ -7,7 +7,8 @@ import {
   UserCircle, 
   Menu, 
   X, 
-  LogOut 
+  LogOut, 
+  BarChart2 
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -33,6 +34,11 @@ const Navigation = () => {
       label: "Inventory",
       icon: <PackageSearch className="h-5 w-5" />,
       path: "/inventory",
+    },
+    {
+      label: "Reports",
+      icon: <BarChart2 className="h-5 w-5" />,
+      path: "/reports",
     },
     {
       label: "Account",

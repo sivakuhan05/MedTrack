@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,7 @@ interface DrugSearchProps {
   inventory: Drug[];
 }
 
-const DrugSearch = ({ onSell, onRestock, inventory }: DrugSearchProps) => {
+const DrugSearch = forwardRef(function DrugSearch({ onSell, onRestock, inventory }: DrugSearchProps, ref) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Drug[]>([]);
@@ -64,6 +64,10 @@ const DrugSearch = ({ onSell, onRestock, inventory }: DrugSearchProps) => {
       setSearchResults([]);
     }
   }, [searchQuery, inventory]);
+
+  useImperativeHandle(ref, () => ({
+    open: () => setIsOpen(true)
+  }));
 
   const handleAction = (drug: Drug, type: "sell" | "restock") => {
     setSelectedDrug(drug);
@@ -201,6 +205,6 @@ const DrugSearch = ({ onSell, onRestock, inventory }: DrugSearchProps) => {
       </Dialog>
     </div>
   );
-};
+});
 
 export default DrugSearch; 

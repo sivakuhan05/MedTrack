@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Navigation from "@/components/Navigation";
 import { StockSummaryCard, RecentActivityCard, ExpiringDrugsCard, LowStockAlertsCard } from "@/components/DashboardCards";
 import DrugSearch from "@/components/DrugSearch";
@@ -35,6 +35,7 @@ const Dashboard = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const drugSearchRef = useRef<{ open: () => void }>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -56,6 +57,17 @@ const Dashboard = () => {
       }
     };
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        drugSearchRef.current?.open();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   if (!user) {
@@ -230,6 +242,7 @@ const Dashboard = () => {
         <div className="flex items-center gap-4 mb-8">
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <DrugSearch 
+            ref={drugSearchRef}
             onSell={handleSell} 
             onRestock={handleRestock} 
             inventory={inventory}
