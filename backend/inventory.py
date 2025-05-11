@@ -1,16 +1,20 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Body
 from typing import List
 from models import InventoryItem, InventoryItemCreate, InventoryActivity, PyObjectId
 from database import get_inventory, get_inventory_activities
 from bson import ObjectId
 from datetime import datetime
 import logging
+from pydantic import BaseModel
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+class QuantityUpdate(BaseModel):
+    quantity: int
 
 @router.get("/activities")
 async def get_activities():
@@ -259,4 +263,74 @@ async def get_low_stock():
     async for item in inventory.find():
         if item["quantity"] <= item["reorder_level"]:
             items.append(InventoryItem(**item))
-    return items 
+    return items
+
+@router.post("/{item_id}/sell")
+async def sell_item(item_id: str, update: QuantityUpdate):
+    if not ObjectId.is_valid(item_id):
+        raise HTTPException(status_code=400, detail="Invalid item ID")
+    
+    inventory = get_inventory()
+    inventory_activities = get_inventory_activities()
+    
+    # Get the current item
+    item = await inventory.find_one({"_id": ObjectId(item_id)})
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    # Check if we have enough quantity
+    if item["quantity"] < update.quantity:
+        raise HTTPException(status_code=400, detail="Not enough stock available")
+    
+    # Update the quantity
+    result = await inventory.update_one(
+        {"_id": ObjectId(item_id)},
+        {"$inc": {"quantity": -update.quantity}, "$set": {"updated_at": datetime.utcnow()}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=500, detail="Failed to update item")
+    
+    # Record the activity
+    activity_dict = {
+        "item_id": ObjectId(item_id),
+        "action": "sold",
+        "details": f"Sold {update.quantity} {item['unit']} of {item['name']}",
+        "timestamp": datetime.utcnow()
+    }
+    await inventory_activities.insert_one(activity_dict)
+    
+    return {"message": "Item sold successfully"}
+
+@router.post("/{item_id}/restock")
+async def restock_item(item_id: str, update: QuantityUpdate):
+    if not ObjectId.is_valid(item_id):
+        raise HTTPException(status_code=400, detail="Invalid item ID")
+    
+    inventory = get_inventory()
+    inventory_activities = get_inventory_activities()
+    
+    # Get the current item
+    item = await inventory.find_one({"_id": ObjectId(item_id)})
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    # Update the quantity
+    result = await inventory.update_one(
+        {"_id": ObjectId(item_id)},
+        {"$inc": {"quantity": update.quantity}, "$set": {"updated_at": datetime.utcnow()}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=500, detail="Failed to update item")
+    
+    # Record the activity
+    activity_dict = {
+        "item_id": ObjectId(item_id),
+        "action": "restocked",
+        "details": f"Restocked {update.quantity} {item['unit']} of {item['name']}",
+        "timestamp": datetime.utcnow()
+    }
+    await inventory_activities.insert_one(activity_dict)
+    
+    return {"message": "Item restocked successfully"} 

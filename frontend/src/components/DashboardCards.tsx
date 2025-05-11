@@ -37,9 +37,9 @@ export function StockSummaryCard({ total, lowStock, expiringSoon }: { total: num
 // Recent Activity Card
 export function RecentActivityCard({ activities }: { activities: { description: string; time: string; type: string }[] }) {
   const dotColor = (type: string) => {
-    if (type === "add") return "bg-green-500";
+    if (type === "add" || type === "restocked") return "bg-green-500";
     if (type === "update") return "bg-blue-500";
-    if (type === "remove") return "bg-red-500";
+    if (type === "remove" || type === "sold") return "bg-red-500";
     return "bg-gray-400";
   };
   return (

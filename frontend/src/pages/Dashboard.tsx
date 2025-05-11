@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import Navigation from "@/components/Navigation";
 import { StockSummaryCard, RecentActivityCard, ExpiringDrugsCard, LowStockAlertsCard } from "@/components/DashboardCards";
+import DrugSearch from "@/components/DrugSearch";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 interface InventoryItem {
   _id: string;
@@ -28,6 +30,7 @@ interface Activity {
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,12 +94,14 @@ const Dashboard = () => {
   // Recent Activity transformation
   const recentActivities = activities.map((a) => {
     // Support both formats
-    let type: "add" | "remove" | "update" = "update";
+    let type: "add" | "remove" | "update" | "sold" | "restocked" = "update";
     let description = a.details || a.description || "";
     let time = a.timestamp || a.created_at || "";
     if (a.action === "created" || a.activity_type === "add") type = "add";
     else if (a.action === "deleted" || a.activity_type === "remove") type = "remove";
     else if (a.action === "updated" || a.activity_type === "update") type = "update";
+    else if (a.action === "sold") type = "sold";
+    else if (a.action === "restocked") type = "restocked";
     return {
       description,
       time: time ? format(new Date(time), "PPpp") : "",
@@ -130,11 +135,106 @@ const Dashboard = () => {
     }))
     .sort((a, b) => a.left - b.left);
 
+  const handleSell = async (drugId: string, quantity: number) => {
+    try {
+      const response = await fetch(`/api/inventory/${drugId}/sell`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ quantity }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Failed to sell drug");
+      }
+
+      // Refresh both inventory and activities data
+      const [invRes, actRes] = await Promise.all([
+        fetch("/api/inventory"),
+        fetch("/api/inventory/activities")
+      ]);
+
+      if (invRes.ok) {
+        const invData = await invRes.json();
+        setInventory(invData);
+      }
+
+      if (actRes.ok) {
+        const actData = await actRes.json();
+        setActivities(actData);
+      }
+
+      toast({
+        title: "Success",
+        description: "Drug sold successfully",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to sell drug",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRestock = async (drugId: string, quantity: number) => {
+    try {
+      const response = await fetch(`/api/inventory/${drugId}/restock`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ quantity }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Failed to restock drug");
+      }
+
+      // Refresh both inventory and activities data
+      const [invRes, actRes] = await Promise.all([
+        fetch("/api/inventory"),
+        fetch("/api/inventory/activities")
+      ]);
+
+      if (invRes.ok) {
+        const invData = await invRes.json();
+        setInventory(invData);
+      }
+
+      if (actRes.ok) {
+        const actData = await actRes.json();
+        setActivities(actData);
+      }
+
+      toast({
+        title: "Success",
+        description: "Drug restocked successfully",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to restock drug",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
+        <div className="flex items-center gap-4 mb-8">
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <DrugSearch 
+            onSell={handleSell} 
+            onRestock={handleRestock} 
+            inventory={inventory}
+          />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StockSummaryCard total={totalItems} lowStock={lowStockCount} expiringSoon={expiringSoonCount} />
           <RecentActivityCard activities={recentActivities} />
