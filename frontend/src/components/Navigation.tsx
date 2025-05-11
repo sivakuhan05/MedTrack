@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -28,7 +27,7 @@ const Navigation = () => {
     const userData = localStorage.getItem("medtrack-user");
     if (userData) {
       setUser(JSON.parse(userData));
-    } else if (location.pathname !== "/") {
+    } else if (location.pathname !== "/" && location.pathname !== "/auth/callback") {
       navigate("/");
     }
   }, [location.pathname, navigate]);
@@ -59,117 +58,94 @@ const Navigation = () => {
   if (!user) return null;
 
   return (
-    <>
-      {/* Desktop Navigation */}
-      <div className="hidden md:flex bg-white border-b border-gray-200 h-16 items-center fixed top-0 left-0 right-0 z-10">
-        <div className="container mx-auto flex justify-between items-center px-4">
-          <div className="flex items-center space-x-2">
-            <div className="h-8 w-8 rounded-md bg-medical-blue flex items-center justify-center">
-              <span className="text-white font-bold text-lg">M</span>
-            </div>
-            <h1 className="text-xl font-bold text-gray-900">MedTrack</h1>
+    <nav className="bg-white border-b">
+      <div className="container mx-auto px-4">
+        <div className="flex justify-between items-center h-16">
+          <div className="flex items-center">
+            <Link to="/dashboard" className="flex items-center">
+              <div className="h-8 w-8 rounded-lg bg-medical-blue flex items-center justify-center mr-2">
+                <span className="text-white font-bold">M</span>
+              </div>
+              <span className="font-bold text-lg">MedTrack</span>
+            </Link>
           </div>
-          
-          <div className="flex items-center space-x-8">
+
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-4">
             {navItems.map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center space-x-1 py-5 ${
+                className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${
                   location.pathname === item.path
-                    ? "text-medical-blue border-b-2 border-medical-blue"
-                    : "text-gray-600 hover:text-medical-blue"
+                    ? "text-medical-blue bg-blue-50"
+                    : "text-gray-600 hover:text-medical-blue hover:bg-blue-50"
                 }`}
               >
                 {item.icon}
-                <span>{item.label}</span>
+                <span className="ml-2">{item.label}</span>
               </Link>
             ))}
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <img
-                src={user.picture || "https://ui-avatars.com/api/?name=User&background=0070c0&color=fff"}
-                alt="User"
-                className="h-8 w-8 rounded-full"
-              />
-              <span className="text-sm font-medium text-gray-700">
-                {user.name || "User"}
-              </span>
-            </div>
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-gray-600">
+            <Button
+              variant="ghost"
+              onClick={handleLogout}
+              className="flex items-center text-gray-600 hover:text-red-600"
+            >
               <LogOut className="h-5 w-5" />
+              <span className="ml-2">Logout</span>
+            </Button>
+          </div>
+
+          {/* Mobile menu button */}
+          <div className="md:hidden">
+            <Button
+              variant="ghost"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
             </Button>
           </div>
         </div>
-      </div>
 
-      {/* Mobile Navigation */}
-      <div className="md:hidden bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 fixed top-0 left-0 right-0 z-10">
-        <div className="flex items-center space-x-2">
-          <div className="h-8 w-8 rounded-md bg-medical-blue flex items-center justify-center">
-            <span className="text-white font-bold text-lg">M</span>
-          </div>
-          <h1 className="text-xl font-bold text-gray-900">MedTrack</h1>
-        </div>
-        
-        <Button variant="ghost" size="sm" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-          {isMobileMenuOpen ? (
-            <X className="h-6 w-6" />
-          ) : (
-            <Menu className="h-6 w-6" />
-          )}
-        </Button>
-      </div>
-
-      {/* Mobile Menu */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-50 bg-white pt-16">
-          <div className="flex flex-col p-4">
-            {navItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex items-center space-x-3 py-4 px-2 ${
-                  location.pathname === item.path
-                    ? "text-medical-blue bg-blue-50 rounded-md"
-                    : "text-gray-600"
-                }`}
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                {item.icon}
-                <span className="text-lg">{item.label}</span>
-              </Link>
-            ))}
-            <div className="mt-auto pt-4 border-t border-gray-200 mt-4">
-              <div className="flex items-center space-x-2 mb-4">
-                <img
-                  src={user.picture || "https://ui-avatars.com/api/?name=User&background=0070c0&color=fff"}
-                  alt="User"
-                  className="h-10 w-10 rounded-full"
-                />
-                <div>
-                  <p className="font-medium text-gray-900">{user.name || "User"}</p>
-                  <p className="text-sm text-gray-500">{user.email}</p>
-                </div>
-              </div>
+        {/* Mobile Navigation */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden">
+            <div className="px-2 pt-2 pb-3 space-y-1">
+              {navItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`flex items-center px-3 py-2 rounded-md text-base font-medium ${
+                    location.pathname === item.path
+                      ? "text-medical-blue bg-blue-50"
+                      : "text-gray-600 hover:text-medical-blue hover:bg-blue-50"
+                  }`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  {item.icon}
+                  <span className="ml-2">{item.label}</span>
+                </Link>
+              ))}
               <Button
-                variant="outline"
-                className="w-full justify-start text-gray-700"
-                onClick={handleLogout}
+                variant="ghost"
+                onClick={() => {
+                  handleLogout();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center justify-start px-3 py-2 text-gray-600 hover:text-red-600"
               >
-                <LogOut className="h-5 w-5 mr-2" />
-                <span>Log out</span>
+                <LogOut className="h-5 w-5" />
+                <span className="ml-2">Logout</span>
               </Button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Spacer for fixed header */}
-      <div className="h-16 w-full"></div>
-    </>
+        )}
+      </div>
+    </nav>
   );
 };
 

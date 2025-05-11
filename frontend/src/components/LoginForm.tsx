@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
@@ -10,18 +9,28 @@ const LoginForm = () => {
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
-    // In a real app, this would be an actual Google OAuth flow
-    // For now, we'll just simulate a login after a short delay
-    setTimeout(() => {
-      // Store a mock session token
-      localStorage.setItem("medtrack-user", JSON.stringify({
-        name: "Test User",
-        email: "user@example.com",
-        picture: "https://ui-avatars.com/api/?name=Test+User&background=0070c0&color=fff"
-      }));
+    try {
+      // Redirect to Google OAuth
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      const redirectUri = import.meta.env.VITE_GOOGLE_REDIRECT_URI;
+      const scope = "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile";
+      const responseType = "code";
+      const state = Math.random().toString(36).substring(7); // Generate random state
+      
+      const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+      authUrl.searchParams.append("client_id", clientId);
+      authUrl.searchParams.append("redirect_uri", redirectUri);
+      authUrl.searchParams.append("response_type", responseType);
+      authUrl.searchParams.append("scope", scope);
+      authUrl.searchParams.append("state", state);
+      authUrl.searchParams.append("access_type", "offline");
+      authUrl.searchParams.append("prompt", "consent");
+      
+      window.location.href = authUrl.toString();
+    } catch (error) {
+      console.error("Error during Google login:", error);
       setIsLoading(false);
-      navigate("/dashboard");
-    }, 1500);
+    }
   };
 
   return (
