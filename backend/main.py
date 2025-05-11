@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from inventory import router as inventory_router
+from auth import router as auth_router
 from database import init_db
 import logging
 from contextlib import asynccontextmanager
@@ -39,6 +40,7 @@ app.add_middleware(
 
 # Mount routers
 app.include_router(inventory_router, prefix="/api/inventory", tags=["inventory"])
+app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 
 @app.get("/")
 async def root():

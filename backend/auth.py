@@ -1,13 +1,14 @@
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 import httpx
 import os
-from dotenv import load_dotenv
-from database import users
-from models import User
-from bson import ObjectId
+from database import get_users
+import logging
 from datetime import datetime
 
-load_dotenv()
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -29,6 +30,12 @@ async def get_google_user_info(access_token: str):
 @router.post("/google-auth")
 async def google_auth(code: str):
     try:
+        logger.info(f"Received Google auth code: {code}")
+        
+        if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+            logger.error("Google OAuth credentials not configured")
+            raise HTTPException(status_code=500, detail="Google OAuth not configured")
+        
         async with httpx.AsyncClient() as client:
             # Exchange code for tokens
             token_response = await client.post(
@@ -44,47 +51,32 @@ async def google_auth(code: str):
             token_data = token_response.json()
             
             if "error" in token_data:
+                logger.error(f"Error from Google OAuth: {token_data['error']}")
                 raise HTTPException(status_code=400, detail=token_data["error"])
             
             # Get user info from Google
             user_info = await get_google_user_info(token_data["access_token"])
             
-            # Check if user exists in database
-            existing_user = await users.find_one({"email": user_info["email"]})
-            
-            if existing_user:
-                # Update user info
-                await users.update_one(
-                    {"email": user_info["email"]},
-                    {
-                        "$set": {
-                            "name": user_info.get("name"),
-                            "picture": user_info.get("picture"),
-                            "updated_at": datetime.utcnow()
-                        }
-                    }
-                )
-                user_data = existing_user
-            else:
-                # Create new user
-                new_user = User(
-                    email=user_info["email"],
-                    name=user_info.get("name", ""),
-                    picture=user_info.get("picture"),
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow()
-                )
-                result = await users.insert_one(new_user.dict(by_alias=True))
-                user_data = await users.find_one({"_id": result.inserted_id})
-            
-            return {
-                "user": {
-                    "id": str(user_data["_id"]),
-                    "email": user_data["email"],
-                    "name": user_data.get("name"),
-                    "picture": user_data.get("picture"),
-                    "role": user_data.get("role", "user")
-                }
+            # Prepare user data
+            user_data = {
+                "id": user_info["id"],
+                "email": user_info["email"],
+                "name": user_info.get("name", ""),
+                "picture": user_info.get("picture"),
+                "updated_at": datetime.utcnow()
             }
+            
+            # Store or update user in database
+            users = get_users()
+            await users.update_one(
+                {"email": user_info["email"]},
+                {"$set": user_data},
+                upsert=True
+            )
+            
+            logger.info(f"Successfully authenticated user: {user_info['email']}")
+            return {"user": user_data}
+            
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e)) 
+        logger.error(f"Error during Google authentication: {str(e)}")
+        raise HTTPException(status_code=401, detail="Authentication failed") 

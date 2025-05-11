@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
@@ -9,6 +9,7 @@ import {
   X, 
   LogOut 
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface NavItem {
   label: string;
@@ -18,19 +19,9 @@ interface NavItem {
 
 const Navigation = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    // Check for user on component mount
-    const userData = localStorage.getItem("medtrack-user");
-    if (userData) {
-      setUser(JSON.parse(userData));
-    } else if (location.pathname !== "/" && location.pathname !== "/auth/callback") {
-      navigate("/");
-    }
-  }, [location.pathname, navigate]);
 
   const navItems: NavItem[] = [
     {
@@ -51,8 +42,8 @@ const Navigation = () => {
   ];
 
   const handleLogout = () => {
-    localStorage.removeItem("medtrack-user");
-    navigate("/");
+    logout();
+    setIsMobileMenuOpen(false);
   };
 
   if (!user) return null;
@@ -132,10 +123,7 @@ const Navigation = () => {
               ))}
               <Button
                 variant="ghost"
-                onClick={() => {
-                  handleLogout();
-                  setIsMobileMenuOpen(false);
-                }}
+                onClick={handleLogout}
                 className="w-full flex items-center justify-start px-3 py-2 text-gray-600 hover:text-red-600"
               >
                 <LogOut className="h-5 w-5" />

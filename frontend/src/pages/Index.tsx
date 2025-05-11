@@ -1,18 +1,25 @@
-
 import LoginForm from "@/components/LoginForm";
 import { useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 const Index = () => {
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is already logged in
-    const user = localStorage.getItem("medtrack-user");
-    if (user) {
-      navigate("/dashboard");
+    if (user && !loading) {
+      navigate("/dashboard", { replace: true });
     }
-  }, [navigate]);
+  }, [user, loading, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-white">

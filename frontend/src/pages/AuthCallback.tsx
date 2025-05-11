@@ -1,7 +1,9 @@
 import { useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 const AuthCallback = () => {
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,12 +31,8 @@ const AuthCallback = () => {
         }
 
         const data = await response.json();
-        
-        // Store the user data
-        localStorage.setItem("medtrack-user", JSON.stringify(data.user));
-        
-        // Force a page reload to ensure all components pick up the new auth state
-        window.location.href = "/dashboard";
+        login(data.user);
+        navigate("/dashboard", { replace: true });
       } catch (error) {
         console.error("Error during authentication:", error);
         navigate("/");
@@ -42,7 +40,7 @@ const AuthCallback = () => {
     };
 
     handleCallback();
-  }, [navigate]);
+  }, [login, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center">

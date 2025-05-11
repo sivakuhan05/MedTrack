@@ -1,11 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const LoginForm = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
+  const { user } = useAuth();
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
@@ -32,6 +32,11 @@ const LoginForm = () => {
       setIsLoading(false);
     }
   };
+
+  // If user is already logged in, don't show the login form
+  if (user) {
+    return null;
+  }
 
   return (
     <Card className="w-full max-w-md mx-auto">

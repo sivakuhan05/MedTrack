@@ -12,6 +12,28 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+@router.get("/activities")
+async def get_activities():
+    inventory_activities = get_inventory_activities()
+    activities = []
+    async for activity in inventory_activities.find().sort("timestamp", -1).limit(10):
+        activities.append({
+            **activity,
+            "_id": str(activity["_id"]),
+            "item_id": str(activity["item_id"])
+        })
+    return activities
+
+@router.get("/{item_id}", response_model=InventoryItem)
+async def get_item(item_id: str):
+    if not ObjectId.is_valid(item_id):
+        raise HTTPException(status_code=400, detail="Invalid item ID")
+    inventory = get_inventory()
+    item = await inventory.find_one({"_id": ObjectId(item_id)})
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return InventoryItem(**item)
+
 @router.get("/", response_model=List[InventoryItem])
 async def get_inventory_items():
     try:
@@ -115,18 +137,6 @@ async def create_item(item: InventoryItemCreate):
             status_code=500,
             detail=f"Failed to create item: {str(e)}"
         )
-
-@router.get("/{item_id}", response_model=InventoryItem)
-async def get_item(item_id: str):
-    if not ObjectId.is_valid(item_id):
-        raise HTTPException(status_code=400, detail="Invalid item ID")
-    
-    inventory = get_inventory()
-    item = await inventory.find_one({"_id": ObjectId(item_id)})
-    if not item:
-        raise HTTPException(status_code=404, detail="Item not found")
-    
-    return InventoryItem(**item)
 
 @router.put("/{item_id}", response_model=InventoryItem)
 async def update_item(item_id: str, item: InventoryItem):
@@ -241,14 +251,6 @@ async def delete_item(item_id: str):
     except Exception as e:
         logger.error(f"Error deleting item: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/activities", response_model=List[InventoryActivity])
-async def get_activities():
-    inventory_activities = get_inventory_activities()
-    activities = []
-    async for activity in inventory_activities.find().sort("timestamp", -1).limit(10):
-        activities.append(InventoryActivity(**activity))
-    return activities
 
 @router.get("/low-stock", response_model=List[InventoryItem])
 async def get_low_stock():

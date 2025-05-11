@@ -1,133 +1,105 @@
-
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
 // Stock Summary Card
-export const StockSummaryCard = ({ totalItems, lowStock, expiringItems }: { totalItems: number; lowStock: number; expiringItems: number }) => {
+export function StockSummaryCard({ total, lowStock, expiringSoon }: { total: number; lowStock: number; expiringSoon: number }) {
+  const lowStockPercent = total ? (lowStock / total) * 100 : 0;
+  const expiringPercent = total ? (expiringSoon / total) * 100 : 0;
   return (
-    <Card className="dashboard-card">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-medium">Stock Summary</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Total Items</span>
-            <span className="text-2xl font-bold">{totalItems}</span>
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Low Stock</span>
-              <span className="text-medical-red font-semibold">{lowStock}</span>
-            </div>
-            <Progress value={(lowStock / totalItems) * 100} className="h-2 bg-gray-100" />
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Expiring Soon</span>
-              <span className="text-medical-amber font-semibold">{expiringItems}</span>
-            </div>
-            <Progress value={(expiringItems / totalItems) * 100} className="h-2 bg-gray-100" />
-          </div>
+    <div className="bg-white rounded-xl shadow p-6 flex flex-col gap-4 min-w-[260px]">
+      <div className="font-bold text-lg mb-2">Stock Summary</div>
+      <div className="flex flex-col gap-2">
+        <div className="flex justify-between items-center">
+          <span>Total Items</span>
+          <span className="text-2xl font-bold text-black">{total}</span>
         </div>
-      </CardContent>
-    </Card>
+        <div className="h-2" />
+        <div className="flex justify-between items-center">
+          <span>Low Stock</span>
+          <span className="text-lg font-bold text-red-600">{lowStock}</span>
+        </div>
+        <div className="w-full h-2 bg-gray-200 rounded-full mb-2">
+          <div className="h-2 bg-blue-600 rounded-full" style={{ width: `${lowStockPercent}%` }}></div>
+        </div>
+        <div className="flex justify-between items-center">
+          <span>Expiring Soon</span>
+          <span className="text-lg font-bold text-yellow-600">{expiringSoon}</span>
+        </div>
+        <div className="w-full h-2 bg-gray-200 rounded-full">
+          <div className="h-2 bg-blue-600 rounded-full" style={{ width: `${expiringPercent}%` }}></div>
+        </div>
+      </div>
+    </div>
   );
-};
+}
 
 // Recent Activity Card
-export const RecentActivityCard = ({ activities }: { activities: Array<{ description: string; time: string; type: string }> }) => {
+export function RecentActivityCard({ activities }: { activities: { description: string; time: string; type: string }[] }) {
+  const dotColor = (type: string) => {
+    if (type === "add") return "bg-green-500";
+    if (type === "update") return "bg-blue-500";
+    if (type === "remove") return "bg-red-500";
+    return "bg-gray-400";
+  };
   return (
-    <Card className="dashboard-card">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-medium">Recent Activity</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {activities.length > 0 ? (
-            activities.map((activity, index) => (
-              <div key={index} className="flex items-start pb-3 border-b last:border-0 border-gray-100">
-                <div className={`w-2 h-2 rounded-full mt-1.5 mr-3 ${
-                  activity.type === 'add' ? 'bg-medical-green' :
-                  activity.type === 'remove' ? 'bg-medical-red' : 'bg-medical-blue'
-                }`} />
-                <div className="flex-1">
-                  <p className="text-sm">{activity.description}</p>
-                  <p className="text-xs text-muted-foreground">{activity.time}</p>
-                </div>
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-muted-foreground">No recent activity</p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="bg-white rounded-xl shadow p-6 min-w-[260px]">
+      <div className="font-bold text-lg mb-4">Recent Activity</div>
+      <div className="flex flex-col gap-4">
+        {activities.map((a, i) => (
+          <div key={i} className="flex items-center gap-3 border-b last:border-b-0 pb-3 last:pb-0">
+            <span className={`h-3 w-3 rounded-full ${dotColor(a.type)}`}></span>
+            <div className="flex-1">
+              <div>{a.description}</div>
+              <div className="text-xs text-gray-500">{a.time}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
-};
+}
 
 // Expiring Drugs Card
-export const ExpiringDrugsCard = ({ drugs }: { drugs: Array<{ name: string; expiryDate: string; daysLeft: number }> }) => {
+export function ExpiringDrugsCard({ drugs }: { drugs: { name: string; expiry: string; daysLeft: number }[] }) {
   return (
-    <Card className="dashboard-card">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-medium">Expiring Soon</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {drugs.length > 0 ? (
-            drugs.map((drug, index) => (
-              <div key={index} className="flex justify-between items-center border-b pb-2 last:border-0">
-                <div>
-                  <p className="font-medium text-sm">{drug.name}</p>
-                  <p className="text-xs text-muted-foreground">Expires: {drug.expiryDate}</p>
-                </div>
-                <span className={`text-xs px-2 py-1 rounded-full ${
-                  drug.daysLeft <= 7 ? 'bg-red-100 text-medical-red' :
-                  drug.daysLeft <= 30 ? 'bg-amber-100 text-medical-amber' : 'bg-blue-100 text-medical-blue'
-                }`}>
-                  {drug.daysLeft} days left
-                </span>
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-muted-foreground">No drugs expiring soon</p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="bg-white rounded-xl shadow p-6 min-w-[260px]">
+      <div className="font-bold text-lg mb-4">Expiring Soon</div>
+      <div className="flex flex-col gap-4">
+        {drugs.map((d, i) => (
+          <div key={i} className="flex items-center justify-between border-b last:border-b-0 pb-3 last:pb-0">
+            <div>
+              <div className="font-medium">{d.name}</div>
+              <div className="text-xs text-gray-500">Expires: {d.expiry}</div>
+            </div>
+            <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-normal">
+              {d.daysLeft} days left
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
-};
+}
 
 // Low Stock Alerts Card
-export const LowStockAlertsCard = ({ drugs }: { drugs: Array<{ name: string; quantity: number; threshold: number }> }) => {
+export function LowStockAlertsCard({ drugs }: { drugs: { name: string; threshold: number; left: number }[] }) {
   return (
-    <Card className="dashboard-card">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-medium">Low Stock Alerts</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {drugs.length > 0 ? (
-            drugs.map((drug, index) => (
-              <div key={index} className="flex justify-between items-center border-b pb-2 last:border-0">
-                <div>
-                  <p className="font-medium text-sm">{drug.name}</p>
-                  <div className="flex items-center space-x-1">
-                    <span className="text-xs text-muted-foreground">Threshold:</span>
-                    <span className="text-xs">{drug.threshold}</span>
-                  </div>
-                </div>
-                <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-medical-red">
-                  {drug.quantity} left
-                </span>
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-muted-foreground">No low stock alerts</p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="bg-white rounded-xl shadow p-6 min-w-[260px]">
+      <div className="font-bold text-lg mb-4">Low Stock Alerts</div>
+      <div className="flex flex-col gap-4">
+        {drugs.map((d, i) => (
+          <div key={i} className="flex items-center justify-between border-b last:border-b-0 pb-3 last:pb-0">
+            <div>
+              <div className="font-medium">{d.name}</div>
+              <div className="text-xs text-gray-500">Threshold: {d.threshold}</div>
+            </div>
+            <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-normal">
+              {d.left} left
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
-};
+}

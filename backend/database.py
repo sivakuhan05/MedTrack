@@ -45,6 +45,18 @@ def get_inventory_activities():
         raise Exception("Inventory activities collection not initialized")
     return inventory_activities
 
+def get_users():
+    global users
+    if users is None:
+        raise Exception("Users collection not initialized")
+    return users
+
+def get_orders():
+    global orders
+    if orders is None:
+        raise Exception("Orders collection not initialized")
+    return orders
+
 async def init_db():
     global client, db, inventory, inventory_activities, users, orders
     
@@ -107,6 +119,10 @@ async def init_db():
             # Create index on item_id for activities
             await inventory_activities.create_index("item_id")
             logger.info("Created index on inventory_activities.item_id")
+            
+            # Create index on email for users
+            await users.create_index("email", unique=True)
+            logger.info("Created unique index on users.email")
             
         except OperationFailure as e:
             logger.error(f"Error creating indexes: {str(e)}")
