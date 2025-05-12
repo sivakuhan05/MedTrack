@@ -48,8 +48,8 @@ const Reports = () => {
           <div className="bg-white rounded-xl shadow p-6">
             <h2 className="text-xl font-semibold mb-4">Top-Selling Drugs (by Revenue)</h2>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={topSellingData}>
-                <XAxis dataKey="name" />
+              <BarChart data={topSellingData} margin={{ bottom: 50 }}>
+                <XAxis dataKey="name" angle={-20} textAnchor="middle" interval={0} dy={20} />
                 <YAxis />
                 <Tooltip formatter={(value: number) => `₹${value.toFixed(2)}`} labelFormatter={label => `Drug: ${label}`} />
                 <Bar dataKey="revenue" fill="#2563eb" radius={[8, 8, 0, 0]} name="Revenue (₹)" />

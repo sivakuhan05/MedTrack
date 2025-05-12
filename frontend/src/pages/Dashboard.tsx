@@ -28,36 +28,41 @@ interface Activity {
 }
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const drugSearchRef = useRef<{ open: () => void }>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [invRes, actRes] = await Promise.all([
-          fetch("/api/inventory"),
-          fetch("/api/inventory/activities")
-        ]);
-        if (!invRes.ok) throw new Error("Failed to fetch inventory");
-        if (!actRes.ok) throw new Error("Failed to fetch activities");
-        const invData = await invRes.json();
-        const actData = await actRes.json();
-        setInventory(invData);
-        setActivities(actData);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+    if (!loading && user) {
+      const fetchData = async () => {
+        try {
+          console.log("Sending X-User-Email (Dashboard):", user.email);
+          const [invRes, actRes] = await Promise.all([
+            fetch("/api/inventory", {
+              headers: { 'X-User-Email': user.email },
+            }),
+            fetch("/api/inventory/activities")
+          ]);
+          if (!invRes.ok) throw new Error("Failed to fetch inventory");
+          if (!actRes.ok) throw new Error("Failed to fetch activities");
+          const invData = await invRes.json();
+          const actData = await actRes.json();
+          setInventory(invData);
+          setActivities(actData);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "An error occurred");
+        } finally {
+          setLoadingData(false);
+        }
+      };
+      fetchData();
+    }
+  }, [loading, user]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -70,11 +75,14 @@ const Dashboard = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  if (!user) {
-    navigate("/");
-    return null;
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
   }
-  if (loading) {
+  if (loadingData) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -148,11 +156,13 @@ const Dashboard = () => {
     .sort((a, b) => a.left - b.left);
 
   const handleSell = async (drugId: string, quantity: number) => {
+    if (!user) return;
     try {
       const response = await fetch(`/api/inventory/${drugId}/sell`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          'X-User-Email': user.email,
         },
         body: JSON.stringify({ quantity }),
       });
@@ -164,7 +174,7 @@ const Dashboard = () => {
 
       // Refresh both inventory and activities data
       const [invRes, actRes] = await Promise.all([
-        fetch("/api/inventory"),
+        fetch("/api/inventory", { headers: { 'X-User-Email': user.email } }),
         fetch("/api/inventory/activities")
       ]);
 
@@ -192,11 +202,13 @@ const Dashboard = () => {
   };
 
   const handleRestock = async (drugId: string, quantity: number) => {
+    if (!user) return;
     try {
       const response = await fetch(`/api/inventory/${drugId}/restock`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          'X-User-Email': user.email,
         },
         body: JSON.stringify({ quantity }),
       });
@@ -208,7 +220,7 @@ const Dashboard = () => {
 
       // Refresh both inventory and activities data
       const [invRes, actRes] = await Promise.all([
-        fetch("/api/inventory"),
+        fetch("/api/inventory", { headers: { 'X-User-Email': user.email } }),
         fetch("/api/inventory/activities")
       ]);
 

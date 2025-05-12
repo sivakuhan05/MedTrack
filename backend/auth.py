@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request, Depends
 from pydantic import BaseModel
 import httpx
 import os
@@ -79,4 +79,12 @@ async def google_auth(code: str):
             
     except Exception as e:
         logger.error(f"Error during Google authentication: {str(e)}")
-        raise HTTPException(status_code=401, detail="Authentication failed") 
+        raise HTTPException(status_code=401, detail="Authentication failed")
+
+def get_current_user(request: Request):
+    # For demo: extract user email from a custom header (e.g., X-User-Email)
+    # In production, use session/cookie/JWT
+    user_email = request.headers.get("X-User-Email")
+    if not user_email:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return type("User", (), {"email": user_email})()  # Simple user object with email 

@@ -27,12 +27,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { HelpCircle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Inventory = () => {
   const [drugs, setDrugs] = useState<Drug[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { user, loading } = useAuth();
 
   // New drug form state
   const [newDrug, setNewDrug] = useState({
@@ -46,15 +48,23 @@ const Inventory = () => {
   });
 
   useEffect(() => {
-    fetchDrugs();
-  }, []);
+    if (!loading && user) {
+      fetchDrugs();
+    }
+  }, [loading, user]);
 
   const fetchDrugs = async () => {
+    if (!user) return;
+    console.log("Sending X-User-Email:", user.email);
     try {
       setIsLoading(true);
       console.log("Fetching inventory items..."); // Debug log
       
-      const response = await fetch("/api/inventory");
+      const response = await fetch("/api/inventory", {
+        headers: {
+          'X-User-Email': user.email,
+        },
+      });
       console.log("Response status:", response.status); // Debug log
       
       if (!response.ok) {
@@ -97,11 +107,14 @@ const Inventory = () => {
   };
 
   const handleDrugUpdate = async (updatedDrug: Drug) => {
+    if (!user) return;
+    console.log("Sending X-User-Email:", user.email);
     try {
       const response = await fetch(`/api/inventory/${updatedDrug.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          'X-User-Email': user.email,
         },
         body: JSON.stringify({
           name: updatedDrug.name,
@@ -139,6 +152,8 @@ const Inventory = () => {
   };
 
   const handleDrugDelete = async (drugId: string) => {
+    if (!user) return;
+    console.log("Sending X-User-Email:", user.email);
     try {
       console.log("Deleting drug with ID:", drugId); // Debug log
       
@@ -147,6 +162,7 @@ const Inventory = () => {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
+          'X-User-Email': user.email,
         },
       });
 
@@ -177,6 +193,8 @@ const Inventory = () => {
   };
 
   const handleCreateDrug = async () => {
+    if (!user) return;
+    console.log("Sending X-User-Email:", user.email);
     try {
       // Validate required fields
       if (!newDrug.name || !newDrug.description || !newDrug.quantity || !newDrug.unit || !newDrug.price || !newDrug.reorderLevel) {
@@ -204,6 +222,7 @@ const Inventory = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          'X-User-Email': user.email,
         },
         body: JSON.stringify(itemData),
       });
@@ -250,6 +269,14 @@ const Inventory = () => {
       });
     }
   };
+
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

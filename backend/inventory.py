@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException, Body, Depends
 from typing import List
 from models import InventoryItem, InventoryItemCreate, InventoryActivity, PyObjectId, InventoryItemUpdate
 from database import get_inventory, get_inventory_activities
@@ -7,6 +7,7 @@ from datetime import datetime
 import logging
 from pydantic import BaseModel
 from collections import defaultdict
+from auth import get_current_user
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -30,14 +31,14 @@ async def get_activities():
     return activities
 
 @router.get("/", response_model=List[InventoryItem])
-async def get_inventory_items():
+async def get_inventory_items(user=Depends(get_current_user)):
     try:
         logger.info("Attempting to fetch inventory items...")
         inventory = get_inventory()
         logger.info("Successfully got inventory collection")
         
         items = []
-        cursor = inventory.find()
+        cursor = inventory.find({"user_email": user.email})
         logger.info("Created cursor for inventory find operation")
         
         try:
@@ -66,8 +67,12 @@ async def get_inventory_items():
             detail=f"Failed to fetch inventory: {str(e)}"
         )
 
+@router.get("", response_model=List[InventoryItem])
+async def get_inventory_items_no_slash(user=Depends(get_current_user)):
+    return await get_inventory_items(user)
+
 @router.post("/", response_model=InventoryItem)
-async def create_item(item: InventoryItemCreate):
+async def create_item(item: InventoryItemCreate, user=Depends(get_current_user)):
     try:
         inventory = get_inventory()
         inventory_activities = get_inventory_activities()
@@ -77,9 +82,7 @@ async def create_item(item: InventoryItemCreate):
         logger.info(f"Checking for existing item with normalized name: {normalized_name}")
         
         # Check if item with same name exists (case-insensitive)
-        existing_item = await inventory.find_one({
-            "name_lower": normalized_name
-        })
+        existing_item = await inventory.find_one({"name_lower": normalized_name, "user_email": user.email})
         logger.info(f"Existing item check result: {existing_item}")
         
         if existing_item:
@@ -95,6 +98,7 @@ async def create_item(item: InventoryItemCreate):
         item_dict["name_lower"] = normalized_name
         item_dict["created_at"] = datetime.utcnow()
         item_dict["updated_at"] = datetime.utcnow()
+        item_dict["user_email"] = user.email
         
         logger.info(f"Creating new item with data: {item_dict}")
         result = await inventory.insert_one(item_dict)
@@ -379,8 +383,8 @@ async def get_top_selling_drugs(limit: int = 5):
             sales_data[name] = {"name": name, "quantity": 0, "revenue": 0.0}
         sales_data[name]["quantity"] += quantity
         sales_data[name]["revenue"] += price * quantity
-    # Sort by revenue
-    sorted_sales = sorted(sales_data.values(), key=lambda x: x["revenue"], reverse=True)[:limit]
+    # Sort by revenue and filter out zero-revenue entries
+    sorted_sales = [entry for entry in sorted(sales_data.values(), key=lambda x: x["revenue"], reverse=True) if entry["revenue"] > 0][:limit]
     return sorted_sales
 
 @router.get("/{item_id}", response_model=InventoryItem)

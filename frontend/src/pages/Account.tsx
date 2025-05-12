@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Navigation from "@/components/Navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Account = () => {
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const { logout } = useAuth();
   
   useEffect(() => {
     // Get user from local storage
@@ -22,11 +23,6 @@ const Account = () => {
     }
     setIsLoading(false);
   }, [navigate]);
-
-  const handleLogout = () => {
-    localStorage.removeItem("medtrack-user");
-    navigate("/");
-  };
 
   if (isLoading) {
     return (
@@ -78,7 +74,7 @@ const Account = () => {
                 </div>
                 
                 <div className="flex justify-end">
-                  <Button variant="destructive" onClick={handleLogout}>Log Out</Button>
+                  <Button variant="destructive" onClick={logout}>Log Out</Button>
                 </div>
               </div>
             </CardContent>
